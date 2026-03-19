@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Membership Tracker</title>
+
+<style>
+body {
+  font-family: Arial;
+  background: #0f172a;
+  color: white;
+  padding: 20px;
+}
+
+.container {
+  max-width: 700px;
+  margin: auto;
+}
+
+/* 🔥 ROW LAYOUT */
+.form-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.form-row input,
+.form-row select {
+  flex: 1;
+  min-width: 120px;
+}
+
+button {
+  width: 100%;
+  padding: 10px;
+  margin: 10px 0;
+  border-radius: 6px;
+  border: none;
+  background: #22c55e;
+  color: white;
+  cursor: pointer;
+}
+
+.member {
+  background: #1e293b;
+  padding: 15px;
+  margin-top: 15px;
+  border-radius: 10px;
+}
+
+.plan {
+  margin-top: 10px;
+  padding: 12px;
+  background: #334155;
+  border-radius: 8px;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.plan-content {
+  flex: 1;
+}
+
+.delete-btn {
+  background: #111;
+  color: #fff;
+  border: none;
+
+  width: 18px;
+  height: 18px;
+
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+
+  border-radius: 3px;
+  cursor: pointer;
+
+  margin-left: 10px;
+  padding: 0;
+}
+
+.delete-btn:hover {
+  background: #333;
+}
+
+.progress-container {
+  background: #0f172a;
+  height: 12px;
+  border-radius: 20px;
+  margin-top: 5px;
+}
+
+.progress-bar {
+  height: 100%;
+  background: #22c55e;
+  border-radius: 20px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <h2>Membership Tracker</h2>
+
+  <div class="form-row">
+    <input type="text" id="name" placeholder="Enter Name">
+
+    <select id="plan">
+      <option value="">Select Plan</option>
+      <option value="Mass|5">Mass (5 days)</option>
+      <option value="Premium|15">Premium (15 days)</option>
+      <option value="VIP|24">VIP (24 days)</option>
+    </select>
+
+    <!-- 🔥 NEW TYPE DROPDOWN -->
+    <select id="type">
+      <option value="">Type</option>
+      <option value="Direct">Direct</option>
+      <option value="Indirect">Indirect</option>
+    </select>
+
+    <input type="date" id="date">
+  </div>
+
+  <button onclick="addMember()">Add</button>
+
+  <div id="list"></div>
+</div>
+
+<script>
+// 🔥 LOAD DATA
+let members = JSON.parse(localStorage.getItem("members")) || [];
+
+// 💡 FORMAT NAME
+function formatName(name) {
+  return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+}
+
+// 💾 SAVE
+function saveData() {
+  localStorage.setItem("members", JSON.stringify(members));
+}
+
+// 🔄 RENDER
+function render() {
+  const list = document.getElementById("list");
+  list.innerHTML = "";
+
+  members.forEach((member, mIndex) => {
+    const memberDiv = document.createElement("div");
+    memberDiv.className = "member";
+    memberDiv.innerHTML = `<h3>${member.name}</h3>`;
+
+    member.plans.forEach((plan, pIndex) => {
+      const start = new Date(plan.date);
+      const today = new Date();
+
+      const diffDays = Math.floor((today - start) / (1000 * 60 * 60 * 24));
+
+      let progress = (diffDays / plan.days) * 100;
+      if (progress < 0) progress = 0;
+      if (progress > 100) progress = 100;
+
+      const planDiv = document.createElement("div");
+      planDiv.className = "plan";
+
+      planDiv.innerHTML = `
+        <div class="plan-content">
+          <strong>${plan.planName}</strong> (${plan.days} days) - ${plan.type}<br>
+          Start: ${plan.date}
+
+          <div class="progress-container">
+            <div class="progress-bar" style="width:${progress}%"></div>
+          </div>
+
+          <small>${Math.floor(progress)}% complete</small>
+        </div>
+
+        <button class="delete-btn">✖</button>
+      `;
+
+      // ❌ DELETE
+      planDiv.querySelector(".delete-btn").onclick = function() {
+        member.plans.splice(pIndex, 1);
+
+        if (member.plans.length === 0) {
+          members.splice(mIndex, 1);
+        }
+
+        saveData();
+        render();
+      };
+
+      memberDiv.appendChild(planDiv);
+    });
+
+    list.appendChild(memberDiv);
+  });
+
+  // clear inputs
+  document.getElementById("name").value = "";
+  document.getElementById("plan").value = "";
+  document.getElementById("type").value = "";
+  document.getElementById("date").value = "";
+}
+
+// ➕ ADD MEMBER
+function addMember() {
+  let rawName = document.getElementById("name").value.trim();
+  const planValue = document.getElementById("plan").value;
+  const type = document.getElementById("type").value;
+  const date = document.getElementById("date").value;
+
+  if (!rawName || !planValue || !type || !date) {
+    alert("Please fill all fields");
+    return;
+  }
+
+  const name = formatName(rawName);
+  const [planName, days] = planValue.split("|");
+
+  // 🔥 CASE-INSENSITIVE
+  let member = members.find(
+    m => m.name.toLowerCase() === name.toLowerCase()
+  );
+
+  if (!member) {
+    member = { name: name, plans: [] };
+    members.push(member);
+  }
+
+  member.plans.push({
+    planName,
+    days: Number(days),
+    type,
+    date
+  });
+
+  saveData();
+  render();
+}
+
+// 🔄 LOAD ON START
+render();
+</script>
+
+</body>
+</html>
